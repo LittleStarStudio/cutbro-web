@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, User } from "lucide-react";
+import { Mail, User, AlertCircle, X } from "lucide-react";
 
 import Button from "@/components/ui/Button";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -21,12 +21,38 @@ type FormData = {
 
 type Errors = Partial<FormData>;
 
+/* ================= SIMULASI EMAIL SUDAH TERDAFTAR ================= */
+// Email di bawah akan memicu error "Email already registered"
+// untuk mensimulasikan akun yang sudah ada di database.
+const TAKEN_EMAILS = [
+  "customer@example.com",
+  "admin@example.com",
+  "owner@example.com",
+  "barber@example.com",
+];
+
+/* ================= ERROR BANNER ================= */
+function ErrorBanner({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 animate-in fade-in slide-in-from-top-2 duration-300">
+      <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+      <p className="text-sm flex-1">{message}</p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="text-red-400/60 hover:text-red-400 transition-colors shrink-0"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 /* ================= COMPONENT ================= */
 export default function Register() {
   const navigate = useNavigate();
   const { selectedRole, backToRoleSelect } = useRoleGuard();
 
-  /* ================= STATE ================= */
   const [form, setForm] = useState<FormData>({
     name: "",
     email: "",
@@ -35,28 +61,48 @@ export default function Register() {
   });
 
   const [errors, setErrors] = useState<Errors>({});
+  const [bannerError, setBannerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   /* ================= INPUT HANDLER ================= */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setBannerError(null);
+  };
 
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  /* ================= VALIDATION ================= */
+  const validate = (): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const newErrors: Errors = {};
 
-    // hapus error saat user mengetik
-    setErrors((prev) => ({
-      ...prev,
-      [name]: undefined,
-    }));
+    if (!form.name.trim()) {
+      newErrors.name = "Full name is required.";
+    }
+    if (!emailRegex.test(form.email.trim())) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+    if (form.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters.";
+    }
+    if (form.confirmPassword !== form.password) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      setBannerError("Please fix the errors below before continuing.");
+      return false;
+    }
+
+    return true;
   };
 
   /* ================= REDIRECT LOGIC ================= */
   const redirectAfterRegister = () => {
     if (selectedRole === "owner") {
-      // 🔑 dipakai PricingGuard
       sessionStorage.setItem("registeredOwner", "true");
       navigate("/pricing", { replace: true });
     } else {
@@ -68,12 +114,20 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRole) return;
+    if (!validate()) return;
 
     setIsLoading(true);
 
     try {
-      // simulasi API register
       await new Promise((r) => setTimeout(r, 1000));
+
+      // ── Simulasi: cek apakah email sudah terdaftar ──
+      const isTaken = TAKEN_EMAILS.includes(form.email.trim().toLowerCase());
+      if (isTaken) {
+        setBannerError("This email is already registered. Please use a different email or login instead.");
+        return;
+      }
+
       redirectAfterRegister();
     } finally {
       setIsLoading(false);
@@ -94,7 +148,6 @@ export default function Register() {
     }
   };
 
-  /* ================= UI ================= */
   return (
     <AuthLayout
       title="Create Account"
@@ -106,28 +159,35 @@ export default function Register() {
         <GoogleButton onClick={handleGoogleRegister} />
         <Divider />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+
+          {/* Error Banner */}
+          {bannerError && (
+            <ErrorBanner message={bannerError} onClose={() => setBannerError(null)} />
+          )}
+
           <FormInput
             label="Full Name"
             icon={User}
             name="name"
+            type="text"
             value={form.name}
             onChange={handleChange}
             placeholder="Enter your full name"
             error={errors.name}
-            required
           />
 
           <FormInput
             label="Email"
             icon={Mail}
             name="email"
-            type="email"
+            type="text"
+            inputMode="email"
+            autoComplete="email"
             value={form.email}
             onChange={handleChange}
             placeholder="you@example.com"
             error={errors.email}
-            required
           />
 
           <PasswordInput
@@ -137,7 +197,6 @@ export default function Register() {
             onChange={handleChange}
             placeholder="Minimum 8 characters"
             error={errors.password}
-            required
           />
 
           <PasswordInput
@@ -147,7 +206,6 @@ export default function Register() {
             onChange={handleChange}
             placeholder="Repeat your password"
             error={errors.confirmPassword}
-            required
           />
 
           <Button

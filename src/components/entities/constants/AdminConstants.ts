@@ -1,64 +1,136 @@
-import type { PlanType, StatusType, SubscriptionStatus } from "@/type/AdminType";
+/* ================= EXISTING CONSTANTS ================= */
 
-// ==================== PLAN STYLES ====================
-export const PLAN_STYLES: Record<PlanType, string> = {
-  Free: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  Pro: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  Premium: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-};
-
-// ==================== STATUS STYLES ====================
-export const STATUS_STYLES: Record<StatusType, string> = {
-  active: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  inactive: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
-  pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  suspended: "bg-red-500/10 text-red-400 border-red-500/20",
-};
-
-// ==================== SUBSCRIPTION STATUS STYLES ====================
-export const SUBSCRIPTION_STATUS_STYLES: Record<SubscriptionStatus, string> = {
-  active: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  expired: "bg-red-500/10 text-red-400 border-red-500/20",
-  cancelled: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
-  trial: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-};
-
-// ==================== STATUS DOT COLORS ====================
-export const STATUS_DOT_COLORS: Record<StatusType, string> = {
-  active: "bg-emerald-400",
-  inactive: "bg-neutral-400",
-  pending: "bg-amber-400",
-  suspended: "bg-red-400",
-};
-
-// ==================== SUBSCRIPTION STATUS DOT COLORS ====================
-export const SUBSCRIPTION_STATUS_DOT_COLORS: Record<SubscriptionStatus, string> = {
-  active: "bg-emerald-400",
-  expired: "bg-red-400",
-  cancelled: "bg-neutral-400",
-  trial: "bg-blue-400",
-};
-
-// ==================== FILTER OPTIONS ====================
+// Barbershop Plan Filters
 export const PLAN_FILTER_OPTIONS = [
-  { label: "All Plans", value: "all" },
-  { label: "Free", value: "Free" },
-  { label: "Pro", value: "Pro" },
-  { label: "Premium", value: "Premium" },
+  { value: "all", label: "All Plans" },
+  { value: "Free", label: "Free" },
+  { value: "Pro", label: "Pro" },
+  { value: "Premium", label: "Premium" },
 ];
 
+// Status Filters
 export const STATUS_FILTER_OPTIONS = [
-  { label: "All Status", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
-  { label: "Pending", value: "pending" },
-  { label: "Suspended", value: "suspended" },
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
 ];
 
-export const ROLE_FILTER_OPTIONS = [
-  { label: "All Roles", value: "all" },
-  { label: "Admin", value: "admin" },
-  { label: "Owner", value: "owner" },
-  { label: "Barber", value: "barber" },
-  { label: "Customer", value: "customer" },
+// Badge Styles for Plans
+export const PLAN_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  Free: "default",
+  Pro: "primary",
+  Premium: "gold",
+};
+
+// Badge Styles for Status
+export const STATUS_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  active: "success",
+  inactive: "default",
+  banned: "danger",
+  pending: "warning",
+  success: "success",
+  failed: "danger",
+};
+
+// Status Dot Colors
+export const STATUS_DOT_COLORS: Record<string, string> = {
+  active: "bg-green-500",
+  inactive: "bg-gray-500",
+  banned: "bg-red-500",
+  pending: "bg-yellow-500",
+  success: "bg-green-500",
+  failed: "bg-red-500",
+};
+
+/* ================= NEW CONSTANTS ================= */
+
+// User Role Filters
+export const USER_ROLE_FILTER_OPTIONS = [
+  { value: "all", label: "All Roles" },
+  { value: "customer", label: "Customer" },
+  { value: "barber", label: "Barber" },
+  { value: "owner", label: "Owner" },
 ];
+
+// User Status Filters
+export const USER_STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "banned", label: "Banned" },
+];
+
+// Badge Styles for User Roles
+export const USER_ROLE_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  customer: "primary",
+  barber: "success",
+  owner: "gold",
+};
+
+// Badge Styles for User Status
+export const USER_STATUS_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  active: "success",
+  inactive: "default",
+  banned: "danger",
+};
+
+// Activity Type Filters
+export const ACTIVITY_TYPE_FILTER_OPTIONS = [
+  { value: "all", label: "All Activities" },
+  { value: "login", label: "Login" },
+  { value: "logout", label: "Logout" },
+  { value: "register", label: "Register" },
+  { value: "create_booking", label: "Create Booking" },
+  { value: "update_profile", label: "Update Profile" },
+  { value: "delete_account", label: "Delete Account" },
+];
+
+// Badge Styles for Activity Types
+export const ACTIVITY_TYPE_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  login: "success",
+  logout: "default",
+  register: "primary",
+  create_booking: "success",
+  update_profile: "warning",
+  delete_account: "danger",
+};
+
+// Activity Type Icons (for Badge component)
+import { LogIn, LogOut, UserPlus, Calendar, Edit, Trash2, type LucideIcon } from "lucide-react";
+
+export const ACTIVITY_TYPE_ICONS: Record<string, LucideIcon> = {
+  login: LogIn,
+  logout: LogOut,
+  register: UserPlus,
+  create_booking: Calendar,
+  update_profile: Edit,
+  delete_account: Trash2,
+};
+
+// Login Log Action Filters
+export const LOG_ACTION_FILTER_OPTIONS = [
+  { value: "all", label: "All Actions" },
+  { value: "login", label: "Login" },
+  { value: "logout", label: "Logout" },
+  { value: "register", label: "Register" },
+];
+
+// Badge Styles for Log Actions
+export const LOG_ACTION_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  login: "success",
+  logout: "default",
+  register: "primary",
+};
+
+// Log Status Filters
+export const LOG_STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "success", label: "Success" },
+  { value: "failed", label: "Failed" },
+];
+
+// Badge Styles for Log Status
+export const LOG_STATUS_STYLES: Record<string, "default" | "primary" | "success" | "warning" | "danger" | "gold"> = {
+  success: "success",
+  failed: "danger",
+};

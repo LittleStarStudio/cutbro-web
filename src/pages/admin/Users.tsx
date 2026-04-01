@@ -1,92 +1,146 @@
-import Layout from "@/components/dashboard/DasboardLayout";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Users as UsersIcon, Plus, Mail, Phone, Shield } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { Users, User, Scissors } from "lucide-react";
+
+import StatsGrid from "@/components/admin/StatGrid";
 import { superAdminLogo, superAdminMenu } from "@/components/config/Menu";
 import { logout, getUser } from "@/lib/auth";
-import type { User } from "@/type/AdminType";
-import { searchInObject, filterByField, capitalizeFirst } from "@/lib/utils/AdminUtils";
+
+import type { User as UserType } from "@/type/AdminType";
+
 import {
-  ROLE_FILTER_OPTIONS,
-  STATUS_FILTER_OPTIONS,
-  STATUS_STYLES,
+  searchInObject,
+  filterByField,
+  capitalizeFirst,
+} from "@/lib/utils/AdminUtils";
+
+import {
+  USER_ROLE_FILTER_OPTIONS,
+  USER_STATUS_FILTER_OPTIONS,
+  USER_ROLE_STYLES,
+  USER_STATUS_STYLES,
   STATUS_DOT_COLORS,
 } from "@/components/entities/constants/AdminConstants";
-import StatCard from "@/components/admin/StatsCard";
-import SearchAndFilters from "@/components/admin/SearchAndFilters";
+
+import TableCard from "@/components/admin/TableCard";
+import DataTable from "@/components/admin/DataTable";
+import MobileCardList from "@/components/admin/MobileCardList";
+import MobileCard from "@/components/admin/MobileCard";
 import Badge from "@/components/admin/Badge";
 import DeleteModal from "@/components/admin/DeleteModal";
-import EmptyState from "@/components/admin/EmptyState";
 import ActionButtons from "@/components/admin/ActionButtons";
+import EditModal, { type FormField } from "@/components/admin/EditModal";
 
-// ==================== DUMMY DATA ====================
-const DUMMY_USERS: User[] = [
+import { useToast } from "@/components/ui/Toast";
+
+/* ================= TYPES ================= */
+interface ExtendedUserType extends UserType {
+  username?: string;
+  lastLogin?: string;
+  loginFrequency?: number;
+  totalBookings?: number;
+  totalSpending?: number;
+  device?: string;
+  location?: string;
+}
+
+/* ================= DUMMY DATA ================= */
+const DUMMY_USERS: ExtendedUserType[] = [
   {
     id: 1,
     name: "John Doe",
     email: "john@example.com",
-    role: "owner",
+    username: "johndoe",
     phone: "+62 812-3456-7890",
+    role: "customer",
     status: "active",
-    joinedDate: "2024-01-15",
-    barbershop: "Classic Cuts",
+    joinDate: "2024-01-15",
+    lastLogin: "2026-02-13 08:30",
+    loginFrequency: 45,
+    totalBookings: 12,
+    totalSpending: 1250000,
+    device: "Mobile - Android",
+    location: "Jakarta, Indonesia",
   },
   {
     id: 2,
     name: "Jane Smith",
     email: "jane@example.com",
-    role: "barber",
+    username: "janesmith",
     phone: "+62 813-4567-8901",
+    role: "barber",
     status: "active",
-    joinedDate: "2024-02-20",
-    barbershop: "Barber King",
+    joinDate: "2024-01-20",
+    lastLogin: "2026-02-13 07:15",
+    loginFrequency: 120,
+    totalBookings: 0,
+    totalSpending: 0,
+    device: "Desktop - Windows",
+    location: "Bandung, Indonesia",
   },
   {
     id: 3,
-    name: "Bob Wilson",
-    email: "bob@example.com",
-    role: "admin",
+    name: "Alice Brown",
+    email: "alice@example.com",
+    username: "alicebrown",
     phone: "+62 814-5678-9012",
+    role: "owner",
     status: "active",
-    joinedDate: "2023-12-10",
+    joinDate: "2024-02-01",
+    lastLogin: "2026-02-12 22:45",
+    loginFrequency: 80,
+    totalBookings: 0,
+    totalSpending: 0,
+    device: "Mobile - iOS",
+    location: "Surabaya, Indonesia",
   },
   {
     id: 4,
-    name: "Alice Brown",
-    email: "alice@example.com",
-    role: "customer",
+    name: "Bob Wilson",
+    email: "bob@example.com",
+    username: "bobwilson",
     phone: "+62 815-6789-0123",
+    role: "customer",
     status: "inactive",
-    joinedDate: "2024-03-05",
+    joinDate: "2024-02-05",
+    lastLogin: "2026-01-20 14:30",
+    loginFrequency: 8,
+    totalBookings: 3,
+    totalSpending: 350000,
+    device: "Mobile - Android",
+    location: "Yogyakarta, Indonesia",
   },
   {
     id: 5,
     name: "Charlie Davis",
     email: "charlie@example.com",
-    role: "barber",
+    username: "charlied",
     phone: "+62 816-7890-1234",
-    status: "active",
-    joinedDate: "2024-01-25",
-    barbershop: "Urban Cuts",
+    role: "customer",
+    status: "banned",
+    joinDate: "2024-03-10",
+    lastLogin: "2026-02-01 10:20",
+    loginFrequency: 25,
+    totalBookings: 5,
+    totalSpending: 500000,
+    device: "Desktop - MacOS",
+    location: "Bali, Indonesia",
   },
 ];
 
-// ==================== ROLE BADGE STYLES ====================
-const ROLE_STYLES: Record<string, string> = {
-  admin: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  owner: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  barber: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  customer: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
-};
+/* ================= COMPONENT ================= */
+export default function UsersManagement() {
+  const toast = useToast();
 
-export default function Users() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<ExtendedUserType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<ExtendedUserType | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentUser = getUser();
 
@@ -94,259 +148,370 @@ export default function Users() {
     setUsers(DUMMY_USERS);
   }, []);
 
-  // Calculate stats
+  /* ================= STATS ================= */
   const stats = useMemo(() => {
     return {
       total: users.length,
-      active: users.filter((u) => u.status === "active").length,
-      owners: users.filter((u) => u.role === "owner").length,
+      customers: users.filter((u) => u.role === "customer").length,
       barbers: users.filter((u) => u.role === "barber").length,
+      owners: users.filter((u) => u.role === "owner").length,
+      activeUsers: users.filter((u) => u.status === "active").length,
     };
   }, [users]);
 
-  // Filter users
+  /* ================= FILTER ================= */
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const matchesSearch = searchInObject(user, searchQuery, [
         "name",
         "email",
         "phone",
-        "barbershop",
+        "username",
       ]);
-      const matchesRole = filterByField(user, "role", filterRole);
-      const matchesStatus = filterByField(user, "status", filterStatus);
 
-      return matchesSearch && matchesRole && matchesStatus;
+      return (
+        matchesSearch &&
+        filterByField(user, "role", filterRole) &&
+        filterByField(user, "status", filterStatus)
+      );
     });
   }, [users, searchQuery, filterRole, filterStatus]);
 
-  const handleDeleteClick = (user: User) => {
+  /* ================= FORMAT CURRENCY ================= */
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  /* ================= EDIT HANDLER ================= */
+  const handleEditClick = (user: ExtendedUserType) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (data: Record<string, any>) => {
+    setIsLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUser?.id ? { ...user, ...data } : user
+        )
+      );
+      setShowEditModal(false);
+      toast.success("User Updated", `${selectedUser?.name} has been updated successfully.`);
+      setSelectedUser(null);
+    } catch {
+      toast.error("Update Failed", "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* ================= DELETE ================= */
+  const handleDeleteClick = (user: ExtendedUserType) => {
     setSelectedUser(user);
     setShowDeleteModal(true);
   };
 
   const handleConfirmDelete = () => {
-    if (selectedUser) {
-      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id));
-      setShowDeleteModal(false);
-      setSelectedUser(null);
-    }
+    if (!selectedUser) return;
+    const name = selectedUser.name;
+    setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
+    setShowDeleteModal(false);
+    setSelectedUser(null);
+    toast.success("User Deleted", `${name} has been removed.`);
   };
 
+  /* ================= TABLE COLUMNS ================= */
+  const columns = [
+    {
+      key: "user",
+      header: "User",
+      render: (user: ExtendedUserType) => (
+        <div>
+          <p className="text-white font-semibold">{user.name}</p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
+          <p className="text-xs text-muted-foreground">{user.phone}</p>
+        </div>
+      ),
+    },
+    {
+      key: "username",
+      header: "Username",
+      render: (user: ExtendedUserType) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          @{user.username}
+        </span>
+      ),
+    },
+    {
+      key: "role",
+      header: "Role",
+      render: (user: ExtendedUserType) => (
+        <Badge
+          text={capitalizeFirst(user.role)}
+          variant={USER_ROLE_STYLES[user.role]}
+        />
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (user: ExtendedUserType) => (
+        <Badge
+          text={capitalizeFirst(user.status)}
+          variant={USER_STATUS_STYLES[user.status]}
+          showDot
+          dotColor={STATUS_DOT_COLORS[user.status]}
+        />
+      ),
+    },
+    {
+      key: "joinDate",
+      header: "Join Date",
+      render: (user: ExtendedUserType) => (
+        <span className="text-xs text-muted-foreground">{user.joinDate}</span>
+      ),
+    },
+    {
+      key: "lastLogin",
+      header: "Last Login",
+      render: (user: ExtendedUserType) => (
+        <span className="text-xs text-muted-foreground">{user.lastLogin}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right" as const,
+      render: (user: ExtendedUserType) => (
+        <ActionButtons
+          actions={[
+            { type: "edit", onClick: () => handleEditClick(user) },
+            { type: "delete", onClick: () => handleDeleteClick(user) },
+          ]}
+        />
+      ),
+    },
+  ];
+
+  /* ================= EDIT MODAL FIELDS ================= */
+  const editFields: FormField[] = [
+    {
+      name: "name",
+      label: "Full Name",
+      type: "text",
+      placeholder: "Enter full name",
+      required: true,
+      validation: (value) => {
+        return value.length >= 3 ? null : "Name must be at least 3 characters";
+      },
+    },
+    {
+      name: "username",
+      label: "Username",
+      type: "text",
+      placeholder: "Enter username",
+      required: true,
+      validation: (value) => {
+        const usernameRegex = /^[a-z0-9_]+$/;
+        return usernameRegex.test(value)
+          ? null
+          : "Username can only contain lowercase letters, numbers, and underscores";
+      },
+      helperText: "Lowercase letters, numbers, and underscores only",
+    },
+    {
+      name: "email",
+      label: "Email Address",
+      type: "email",
+      placeholder: "Enter email",
+      required: true,
+      validation: (value) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(value) ? null : "Invalid email format";
+      },
+    },
+    {
+      name: "phone",
+      label: "Phone Number",
+      type: "text",
+      placeholder: "+62 812-3456-7890",
+      required: true,
+      validation: (value) => {
+        return value.length >= 10
+          ? null
+          : "Phone number must be at least 10 characters";
+      },
+    },
+    {
+      name: "role",
+      label: "User Role",
+      type: "select",
+      required: true,
+      options: [
+        { value: "customer", label: "Customer" },
+        { value: "barber", label: "Barber" },
+        { value: "owner", label: "Owner" },
+      ],
+    },
+    {
+      name: "status",
+      label: "Account Status",
+      type: "select",
+      required: true,
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "banned", label: "Banned" },
+      ],
+    },
+    {
+      name: "location",
+      label: "Location",
+      type: "text",
+      placeholder: "e.g., Jakarta, Indonesia",
+    },
+  ];
+
+  /* ================= UI ================= */
   return (
-    <Layout
+    <DashboardLayout
       title="Users Management"
-      subtitle="Manage all registered users"
+      subtitle="Manage all registered barbershops"
+      showSidebar
       menuItems={superAdminMenu}
       logo={superAdminLogo}
-      onLogout={logout}
-      user={
-        currentUser
-          ? {
-              name: currentUser.name,
-              email: currentUser.email,
-              avatar: currentUser.name.charAt(0).toUpperCase(),
-            }
-          : undefined
+      userProfile={
+        currentUser ?? {
+          name: "Super Admin",
+          email: "admin@cutbro.com",
+          role: "admin",
+        }
       }
-      showNotification={true}
+      showNotification
       notificationCount={3}
+      onLogout={logout}
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Users</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Manage all registered users
-            </p>
-          </div>
+      <div className="w-full space-y-6 lg:space-y-8">
 
-          <Link to="/admin/users/add">
-            <Button variant="gold" className="shadow-lg shadow-amber-500/25">
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
-          </Link>
-        </div>
+        {/* ================= STATS ================= */}
+        <StatsGrid
+          columns={3}
+          stats={[
+            { icon: Users, title: "Total Users", value: stats.total },
+            { icon: User, title: "Active Users", value: stats.activeUsers },
+            { icon: Scissors, title: "Barbers", value: stats.barbers },
+          ]}
+        />
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Users"
-            value={stats.total}
-            icon={UsersIcon}
-            iconBgColor="bg-blue-500/10"
-            iconColor="text-blue-400"
-          />
-          <StatCard
-            title="Active Users"
-            value={stats.active}
-            icon={UsersIcon}
-            iconBgColor="bg-emerald-500/10"
-            iconColor="text-emerald-400"
-          />
-          <StatCard
-            title="Owners"
-            value={stats.owners}
-            icon={Shield}
-            iconBgColor="bg-amber-500/10"
-            iconColor="text-amber-400"
-          />
-          <StatCard
-            title="Barbers"
-            value={stats.barbers}
-            icon={UsersIcon}
-            iconBgColor="bg-purple-500/10"
-            iconColor="text-purple-400"
-          />
-        </div>
-
-        {/* Filters */}
-        <SearchAndFilters
+        {/* ================= TABLE ================= */}
+        <TableCard
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search users by name, email, or phone..."
+          searchPlaceholder="Search users by name, email, username..."
           filters={[
             {
               label: "Role",
               value: filterRole,
               onChange: setFilterRole,
-              options: ROLE_FILTER_OPTIONS,
+              options: USER_ROLE_FILTER_OPTIONS,
             },
             {
               label: "Status",
               value: filterStatus,
               onChange: setFilterStatus,
-              options: STATUS_FILTER_OPTIONS,
+              options: USER_STATUS_FILTER_OPTIONS,
             },
           ]}
-        />
+          isEmpty={filteredUsers.length === 0}
+          emptyIcon={Users}
+          emptyTitle="No users found"
+          emptyDescription="Try adjusting your filters"
+        >
+          <DataTable data={filteredUsers} columns={columns} />
 
-        {/* Table */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-800">
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    User
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Contact
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Role
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Barbershop
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Joined Date
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Status
-                  </th>
-                  <th className="text-right px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
-                  <EmptyState
-                    icon={UsersIcon}
-                    title="No users found"
-                    description="Try adjusting your search or filters"
+          <MobileCardList
+            data={filteredUsers}
+            renderCard={(user) => (
+              <MobileCard
+                title={user.name}
+                subtitle={
+                  <span className="text-xs font-mono">@{user.username}</span>
+                }
+                headerRight={
+                  <Badge
+                    text={capitalizeFirst(user.status)}
+                    variant={USER_STATUS_STYLES[user.status]}
+                    showDot
+                    dotColor={STATUS_DOT_COLORS[user.status]}
                   />
-                ) : (
-                  filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="border-b border-neutral-800 hover:bg-neutral-800/50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold">
-                            {user.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-white">
-                              {user.name}
-                            </p>
-                            <div className="flex items-center gap-1 text-sm text-neutral-400">
-                              <Mail className="w-3 h-3" />
-                              {user.email}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1 text-neutral-300">
-                          <Phone className="w-3 h-3" />
-                          {user.phone}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <Badge
-                          text={capitalizeFirst(user.role)}
-                          variant={ROLE_STYLES[user.role]}
-                        />
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className="text-neutral-300">
-                          {user.barbershop || "-"}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className="text-neutral-300">
-                          {new Date(user.joinedDate).toLocaleDateString(
-                            "id-ID"
-                          )}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <Badge
-                          text={capitalizeFirst(user.status)}
-                          variant={STATUS_STYLES[user.status]}
-                          showDot
-                          dotColor={STATUS_DOT_COLORS[user.status]}
-                        />
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <ActionButtons
-                          actions={[
-                            {
-                              type: "view",
-                              href: `/admin/users/${user.id}`,
-                            },
-                            {
-                              type: "edit",
-                              href: `/admin/users/edit/${user.id}`,
-                            },
-                            {
-                              type: "delete",
-                              onClick: () => handleDeleteClick(user),
-                            },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                }
+                fields={[
+                  { label: "Email", value: user.email },
+                  { label: "Phone", value: user.phone },
+                  {
+                    label: "Role",
+                    value: (
+                      <Badge
+                        text={capitalizeFirst(user.role)}
+                        variant={USER_ROLE_STYLES[user.role]}
+                      />
+                    ),
+                  },
+                  { label: "Joined", value: user.joinDate },
+                  { label: "Last Login", value: user.lastLogin },
+                  ...(user.role === "customer"
+                    ? [
+                        {
+                          label: "Bookings",
+                          value: String(user.totalBookings),
+                        },
+                        {
+                          label: "Total Spent",
+                          value: (
+                            <span className="text-[#D4AF37]">
+                              {formatCurrency(user.totalSpending || 0)}
+                            </span>
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
+                actions={
+                  <ActionButtons
+                    actions={[
+                      { type: "edit", onClick: () => handleEditClick(user) },
+                      { type: "delete", onClick: () => handleDeleteClick(user) },
+                    ]}
+                  />
+                }
+              />
+            )}
+          />
+        </TableCard>
       </div>
 
-      {/* Delete Modal */}
+      {/* ================= EDIT MODAL ================= */}
+      <EditModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedUser(null);
+        }}
+        onSave={handleSaveEdit}
+        title="Edit User"
+        subtitle="Update user information and permissions"
+        fields={editFields}
+        initialData={selectedUser || {}}
+        isLoading={isLoading}
+      />
+
+      {/* ================= DELETE MODAL ================= */}
       <DeleteModal
         isOpen={showDeleteModal}
         title="Delete User"
@@ -354,6 +519,6 @@ export default function Users() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteModal(false)}
       />
-    </Layout>
+    </DashboardLayout>
   );
 }

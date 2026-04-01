@@ -28,13 +28,13 @@ export default function ForgotPassword() {
           </div>
           <h2 className="text-2xl font-bold text-white">Reset Password</h2>
           <p className="text-neutral-400 text-sm">
-            Masukkan email untuk menerima link reset
+            Enter your email to receive a reset link
           </p>
         </div>
 
         {isSent ? (
           <p className="text-green-400 text-sm text-center">
-            Link reset sudah dikirim ke email kamu ✉️
+            A password reset link has been sent to your email ✉️
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -45,13 +45,13 @@ export default function ForgotPassword() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@mail.com"
+                placeholder="email@example.com"
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-800 text-white border border-neutral-700"
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Mengirim..." : "Kirim Link Reset"}
+              {loading ? "Sending..." : "Send Reset Link"}
             </Button>
           </form>
         )}
@@ -60,7 +60,7 @@ export default function ForgotPassword() {
           to="/login"
           className="block text-center text-sm text-amber-400 hover:underline"
         >
-          Kembali ke login
+          Back to Login
         </Link>
       </div>
     </div>

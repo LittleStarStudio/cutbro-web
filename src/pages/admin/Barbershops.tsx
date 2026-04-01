@@ -1,12 +1,19 @@
-import Layout from "@/components/dashboard/DasboardLayout";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Store, Plus, MapPin, Crown, User } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { Store, Crown, MapPin, Star, Users, TrendingUp } from "lucide-react";
+
+import StatsGrid from "@/components/admin/StatGrid";
 import { superAdminLogo, superAdminMenu } from "@/components/config/Menu";
 import { logout, getUser } from "@/lib/auth";
+
 import type { Barbershop } from "@/type/AdminType";
-import { searchInObject, filterByField, capitalizeFirst } from "@/lib/utils/AdminUtils";
+
+import {
+  searchInObject,
+  filterByField,
+  capitalizeFirst,
+} from "@/lib/utils/AdminUtils";
+
 import {
   PLAN_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
@@ -14,14 +21,21 @@ import {
   STATUS_STYLES,
   STATUS_DOT_COLORS,
 } from "@/components/entities/constants/AdminConstants";
-import StatCard from "@/components/admin/StatsCard";
-import SearchAndFilters from "@/components/admin/SearchAndFilters";
+
 import Badge from "@/components/admin/Badge";
 import DeleteModal from "@/components/admin/DeleteModal";
-import EmptyState from "@/components/admin/EmptyState";
 import ActionButtons from "@/components/admin/ActionButtons";
+import EditModal, { type FormField } from "@/components/admin/EditModal";
 
-// ==================== DUMMY DATA ====================
+import TableCard from "@/components/admin/TableCard";
+import DataTable from "@/components/admin/DataTable";
+import MobileCardList from "@/components/admin/MobileCardList";
+import MobileCard from "@/components/admin/MobileCard";
+
+import { useToast } from "@/components/ui/Toast";
+
+/* ================= DUMMY DATA ================= */
+
 const DUMMY_BARBERSHOPS: Barbershop[] = [
   {
     id: 1,
@@ -32,6 +46,7 @@ const DUMMY_BARBERSHOPS: Barbershop[] = [
     barbers: 8,
     status: "active",
     revenue: "Rp 12.5M",
+    rate: 4.8,
   },
   {
     id: 2,
@@ -42,6 +57,7 @@ const DUMMY_BARBERSHOPS: Barbershop[] = [
     barbers: 5,
     status: "active",
     revenue: "Rp 8.2M",
+    rate: 4.5,
   },
   {
     id: 3,
@@ -52,54 +68,46 @@ const DUMMY_BARBERSHOPS: Barbershop[] = [
     barbers: 1,
     status: "inactive",
     revenue: "Rp 1.5M",
-  },
-  {
-    id: 4,
-    name: "Elite Grooming",
-    owner: "Bob Wilson",
-    location: "Jakarta Pusat",
-    plan: "Premium",
-    barbers: 12,
-    status: "active",
-    revenue: "Rp 18.3M",
-  },
-  {
-    id: 5,
-    name: "Urban Cuts",
-    owner: "Charlie Davis",
-    location: "Yogyakarta",
-    plan: "Pro",
-    barbers: 4,
-    status: "active",
-    revenue: "Rp 6.1M",
+    rate: 3.2,
   },
 ];
 
+/* ================= COMPONENT ================= */
+
 export default function Barbershops() {
+  const toast = useToast();
+
   const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterPlan, setFilterPlan] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPlan, setFilterPlan] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedShop, setSelectedShop] = useState<Barbershop | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentUser = getUser();
+
+  /* ================= FETCH (DUMMY) ================= */
 
   useEffect(() => {
     setBarbershops(DUMMY_BARBERSHOPS);
   }, []);
 
-  // Calculate stats
+  /* ================= STATS ================= */
+
   const stats = useMemo(() => {
     return {
-      total: barbershops.length,
-      active: barbershops.filter((s) => s.status === "active").length,
+      total:   barbershops.length,
+      free:    barbershops.filter((s) => s.plan === "Free").length,
+      pro:     barbershops.filter((s) => s.plan === "Pro").length,
       premium: barbershops.filter((s) => s.plan === "Premium").length,
-      totalBarbers: barbershops.reduce((acc, shop) => acc + shop.barbers, 0),
     };
   }, [barbershops]);
 
-  // Filter barbershops
+  /* ================= FILTER ================= */
+
   const filteredBarbershops = useMemo(() => {
     return barbershops.filter((shop) => {
       const matchesSearch = searchInObject(shop, searchQuery, [
@@ -107,12 +115,101 @@ export default function Barbershops() {
         "owner",
         "location",
       ]);
-      const matchesPlan = filterByField(shop, "plan", filterPlan);
-      const matchesStatus = filterByField(shop, "status", filterStatus);
 
-      return matchesSearch && matchesPlan && matchesStatus;
+      return (
+        matchesSearch &&
+        filterByField(shop, "plan", filterPlan) &&
+        filterByField(shop, "status", filterStatus)
+      );
     });
   }, [barbershops, searchQuery, filterPlan, filterStatus]);
+
+  /* ================= EDIT FIELDS ================= */
+
+  const editFields: FormField[] = [
+    {
+      name: "name",
+      label: "Barbershop Name",
+      type: "text",
+      required: true,
+      placeholder: "Enter barbershop name",
+      validation: (value) =>
+        value.length >= 3 ? null : "Minimum 3 characters",
+    },
+    { name: "owner",    label: "Owner Name",     type: "text",   required: true },
+    { name: "location", label: "Location",        type: "text",   required: true },
+    {
+      name: "plan",
+      label: "Subscription Plan",
+      type: "select",
+      required: true,
+      options: [
+        { value: "Free",    label: "Free"    },
+        { value: "Pro",     label: "Pro"     },
+        { value: "Premium", label: "Premium" },
+      ],
+    },
+    {
+      name: "barbers",
+      label: "Number of Barbers",
+      type: "number",
+      required: true,
+      validation: (value) =>
+        Number(value) > 0 ? null : "At least 1 barber required",
+    },
+    { name: "revenue", label: "Monthly Revenue", type: "text",   placeholder: "Rp 10.5M" },
+    {
+      name: "rate",
+      label: "Rating",
+      type: "number",
+      placeholder: "0.0 - 5.0",
+      validation: (value) =>
+        Number(value) >= 0 && Number(value) <= 5
+          ? null
+          : "Rating must be between 0 and 5",
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      required: true,
+      options: [
+        { value: "active",   label: "Active"   },
+        { value: "inactive", label: "Inactive" },
+      ],
+    },
+  ];
+
+  /* ================= EDIT ================= */
+
+  const handleEditClick = (shop: Barbershop) => {
+    setSelectedShop(shop);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (data: Record<string, string | number>) => {
+    if (!selectedShop) return;
+    setIsLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 1200));
+      setBarbershops((prev) =>
+        prev.map((shop) =>
+          shop.id === selectedShop.id
+            ? { ...shop, ...data, barbers: Number(data.barbers), rate: Number(data.rate) }
+            : shop
+        )
+      );
+      setShowEditModal(false);
+      toast.success("Barbershop Updated", `${selectedShop.name} has been updated successfully.`);
+      setSelectedShop(null);
+    } catch {
+      toast.error("Update Failed", "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* ================= DELETE ================= */
 
   const handleDeleteClick = (shop: Barbershop) => {
     setSelectedShop(shop);
@@ -120,89 +217,167 @@ export default function Barbershops() {
   };
 
   const handleConfirmDelete = () => {
-    if (selectedShop) {
-      setBarbershops((prev) =>
-        prev.filter((shop) => shop.id !== selectedShop.id)
-      );
-      setShowDeleteModal(false);
-      setSelectedShop(null);
-    }
+    if (!selectedShop) return;
+    const name = selectedShop.name;
+    setBarbershops((prev) => prev.filter((s) => s.id !== selectedShop.id));
+    setShowDeleteModal(false);
+    setSelectedShop(null);
+    toast.success("Barbershop Deleted", `${name} has been removed.`);
   };
 
-  return (
-    <Layout
-      title="Barbershops Management"
-      subtitle="Manage all registered barbershops and their plans"
-      menuItems={superAdminMenu}
-      logo={superAdminLogo}
-      onLogout={logout}
-      user={
-        currentUser
-          ? {
-              name: currentUser.name,
-              email: currentUser.email,
-              avatar: currentUser.name.charAt(0).toUpperCase(),
-            }
-          : undefined
-      }
-      showNotification={true}
-      notificationCount={3}
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Barbershops</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Manage all registered barbershops
+  /* ================= TABLE COLUMNS ================= */
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        header: "Shop",
+        render: (shop: Barbershop) => (
+          <div className="min-w-[140px]">
+            <p className="text-white font-semibold truncate max-w-[160px]">{shop.name}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin size={12} />
+              <span className="truncate max-w-[120px]">{shop.location}</span>
             </p>
           </div>
+        ),
+      },
+      {
+        key: "owner",
+        header: "Owner",
+        render: (shop: Barbershop) => (
+          <span className="text-muted-foreground whitespace-nowrap min-w-[100px] block">
+            {shop.owner}
+          </span>
+        ),
+      },
+      {
+        key: "plan",
+        header: "Plan",
+        render: (shop: Barbershop) => (
+          <div className="min-w-[80px]">
+            <Badge text={shop.plan} variant={PLAN_STYLES[shop.plan]} />
+          </div>
+        ),
+      },
+      {
+        key: "barbers",
+        header: "Barbers",
+        render: (shop: Barbershop) => (
+          <span className="whitespace-nowrap">{shop.barbers}</span>
+        ),
+      },
+      {
+        key: "revenue",
+        header: "Revenue",
+        render: (shop: Barbershop) => (
+          <span className="font-medium whitespace-nowrap min-w-[80px] block">{shop.revenue}</span>
+        ),
+      },
+      {
+        key: "rate",
+        header: "Rate",
+        render: (shop: Barbershop) => (
+          <div className="flex items-center gap-1 min-w-[70px]">
+            <Star size={13} className="text-yellow-400 fill-yellow-400 shrink-0" />
+            <span className="font-medium text-white">{shop.rate.toFixed(1)}</span>
+          </div>
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (shop: Barbershop) => (
+          <div className="min-w-[80px]">
+            <Badge
+              text={capitalizeFirst(shop.status)}
+              variant={STATUS_STYLES[shop.status]}
+              showDot
+              dotColor={STATUS_DOT_COLORS[shop.status]}
+            />
+          </div>
+        ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        headerClassName: "text-right",
+        className: "text-right",
+        render: (shop: Barbershop) => (
+          <ActionButtons
+            actions={[
+              { type: "edit",   onClick: () => handleEditClick(shop)   },
+              { type: "delete", onClick: () => handleDeleteClick(shop) },
+            ]}
+          />
+        ),
+      },
+    ],
+    [handleEditClick, handleDeleteClick]
+  );
 
-          <Link to="/admin/barbershops/add">
-            <Button variant="gold" className="shadow-lg shadow-amber-500/25">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Barbershop
-            </Button>
-          </Link>
-        </div>
+  /* ================= UI ================= */
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Shops"
-            value={stats.total}
-            icon={Store}
-            iconBgColor="bg-blue-500/10"
-            iconColor="text-blue-400"
-          />
-          <StatCard
-            title="Active"
-            value={stats.active}
-            icon={Store}
-            iconBgColor="bg-emerald-500/10"
-            iconColor="text-emerald-400"
-          />
-          <StatCard
-            title="Premium"
-            value={stats.premium}
-            icon={Crown}
-            iconBgColor="bg-purple-500/10"
-            iconColor="text-purple-400"
-          />
-          <StatCard
-            title="Total Barbers"
-            value={stats.totalBarbers}
-            icon={User}
-            iconBgColor="bg-amber-500/10"
-            iconColor="text-amber-400"
-          />
-        </div>
+  return (
+    <DashboardLayout
+      title="Barbershops Management"
+      subtitle="Manage all registered barbershops"
+      showSidebar
+      menuItems={superAdminMenu}
+      logo={superAdminLogo}
+      userProfile={
+        currentUser ?? {
+          name:  "Super Admin",
+          email: "admin@cutbro.com",
+          role:  "admin",
+        }
+      }
+      showNotification
+      notificationCount={3}
+      onLogout={logout}
+    >
+      <div className="w-full space-y-4 sm:space-y-6 lg:space-y-8">
 
-        {/* Filters */}
-        <SearchAndFilters
+        {/* ================= STATS ================= */}
+        <StatsGrid
+          columns={4}
+          stats={[
+            {
+              icon: Store,
+              title: "Total",
+              value: stats.total,
+              iconBgColor: "bg-[#22C55E1A]",
+              iconColor: "text-[#22C55E]",
+            },
+            {
+              icon: Users,
+              title: "Free Plan",
+              value: stats.free,
+              iconBgColor: "bg-[#60A5FA1A]",
+              iconColor: "text-[#60A5FA]",
+            },
+            {
+              icon: TrendingUp,
+              title: "Pro Plan",
+              value: stats.pro,
+              iconBgColor: "bg-[#F59E0B1A]",
+              iconColor: "text-[#F59E0B]",
+            },
+            {
+              icon: Crown,
+              title: "Premium",
+              value: stats.premium,
+              iconBgColor: "bg-[#C084FC1A]",
+              iconColor: "text-[#C084FC]",
+            },
+          ]}
+        />
+
+        {/* ================= TABLE CARD ================= */}
+        <TableCard
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search barbershops, owners, or locations..."
+          searchPlaceholder="Search barbershops..."
           filters={[
             {
               label: "Plan",
@@ -217,137 +392,84 @@ export default function Barbershops() {
               options: STATUS_FILTER_OPTIONS,
             },
           ]}
-        />
-
-        {/* Table */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-800">
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Barbershop
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Owner
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Plan
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Barbers
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Revenue
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Status
-                  </th>
-                  <th className="text-right px-6 py-4 text-sm font-semibold text-neutral-400">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBarbershops.length === 0 ? (
-                  <EmptyState
-                    icon={Store}
-                    title="No barbershops found"
-                    description="Try adjusting your search or filters"
-                  />
-                ) : (
-                  filteredBarbershops.map((shop) => (
-                    <tr
-                      key={shop.id}
-                      className="border-b border-neutral-800 hover:bg-neutral-800/50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-semibold text-white">
-                            {shop.name}
-                          </p>
-                          <div className="flex items-center gap-1 text-sm text-neutral-400 mt-1">
-                            <MapPin className="w-3 h-3" />
-                            {shop.location}
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-sm font-bold">
-                            {shop.owner.charAt(0)}
-                          </div>
-                          <span className="text-neutral-300">
-                            {shop.owner}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <Badge
-                          text={shop.plan}
-                          variant={PLAN_STYLES[shop.plan]}
-                          showCrown={shop.plan === "Premium"}
-                        />
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className="text-neutral-300">
-                          {shop.barbers}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className="text-neutral-300 font-semibold">
-                          {shop.revenue}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <Badge
-                          text={capitalizeFirst(shop.status)}
-                          variant={STATUS_STYLES[shop.status]}
-                          showDot
-                          dotColor={STATUS_DOT_COLORS[shop.status]}
-                        />
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <ActionButtons
-                          actions={[
-                            {
-                              type: "view",
-                              href: `/admin/barbershops/${shop.id}`,
-                            },
-                            {
-                              type: "edit",
-                              href: `/admin/barbershops/edit/${shop.id}`,
-                            },
-                            {
-                              type: "delete",
-                              onClick: () => handleDeleteClick(shop),
-                            },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          isEmpty={filteredBarbershops.length === 0}
+          emptyIcon={Store}
+          emptyTitle="No barbershops found"
+          emptyDescription="Try adjusting your filters"
+        >
+          {/* DESKTOP TABLE */}
+          <div className="hidden md:block w-full overflow-x-auto">
+            <DataTable data={filteredBarbershops} columns={columns} />
           </div>
-        </div>
+
+          {/* MOBILE CARDS */}
+          <div className="block md:hidden">
+            <MobileCardList
+              data={filteredBarbershops}
+              renderCard={(shop) => (
+                <MobileCard
+                  title={shop.name}
+                  subtitle={
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin size={11} />
+                      {shop.location}
+                    </span>
+                  }
+                  headerRight={
+                    <Badge
+                      text={capitalizeFirst(shop.status)}
+                      variant={STATUS_STYLES[shop.status]}
+                      showDot
+                      dotColor={STATUS_DOT_COLORS[shop.status]}
+                    />
+                  }
+                  fields={[
+                    { label: "Owner",   value: shop.owner },
+                    {
+                      label: "Plan",
+                      value: <Badge text={shop.plan} variant={PLAN_STYLES[shop.plan]} />,
+                    },
+                    { label: "Barbers", value: shop.barbers },
+                    { label: "Revenue", value: shop.revenue },
+                    { label: "Rate",    value: `⭐ ${shop.rate.toFixed(1)}` },
+                  ]}
+                  actions={
+                    <ActionButtons
+                      actions={[
+                        { type: "edit",   onClick: () => handleEditClick(shop)   },
+                        { type: "delete", onClick: () => handleDeleteClick(shop) },
+                      ]}
+                    />
+                  }
+                />
+              )}
+            />
+          </div>
+        </TableCard>
       </div>
 
-      {/* Delete Modal */}
+      {/* ================= MODALS ================= */}
+      <EditModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedShop(null);
+        }}
+        onSave={handleSaveEdit}
+        title="Edit Barbershop"
+        subtitle="Update barbershop information"
+        fields={editFields}
+        initialData={selectedShop ?? {}}
+        isLoading={isLoading}
+      />
+
       <DeleteModal
         isOpen={showDeleteModal}
         title="Delete Barbershop"
-        itemName={selectedShop?.name || ""}
+        itemName={selectedShop?.name ?? ""}
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteModal(false)}
       />
-    </Layout>
+    </DashboardLayout>
   );
 }

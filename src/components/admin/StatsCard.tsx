@@ -1,45 +1,61 @@
-import type{ LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+type Trend = {
+  value: string;
+  isPositive?: boolean;
+};
 
 type StatCardProps = {
-  title: string;
-  value: number | string;
   icon: LucideIcon;
-  iconBgColor: string;
-  iconColor: string;
-  trend?: {
-    value: string;
-    isPositive: boolean;
-  };
+  title: string;
+  value: string | number;
+  iconBgColor?: string;
+  iconColor?: string;
+  trend?: Trend;
 };
 
 export default function StatCard({
+  icon: Icon,
   title,
   value,
-  icon: Icon,
-  iconBgColor,
-  iconColor,
+  iconBgColor = "bg-[#2A2A2A]",
+  iconColor = "text-[#D4AF37]",
   trend,
 }: StatCardProps) {
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3 sm:p-4 hover:border-neutral-700 transition-colors">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-neutral-400 text-xs sm:text-sm truncate">{title}</p>
-          <p className="text-xl sm:text-2xl font-bold text-white mt-1 truncate">{value}</p>
+    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4 sm:p-5
+                    hover:border-[#D4AF37]/40 transition-all duration-200">
+
+      <div className="flex items-center justify-between">
+
+        {/* Left Content */}
+        <div className="space-y-1">
+          {/* title lebih kecil */}
+          <p className="text-[11px] uppercase tracking-wider text-[#9CA3AF] font-medium">
+            {title}
+          </p>
+
+          {/* value lebih compact */}
+          <h3 className="text-lg sm:text-xl font-semibold text-white">
+            {value}
+          </h3>
+
           {trend && (
             <p
-              className={`text-xs mt-1 sm:mt-2 ${
-                trend.isPositive ? "text-emerald-400" : "text-red-400"
+              className={`text-[11px] font-medium ${
+                trend.isPositive ? "text-green-400" : "text-red-400"
               }`}
             >
-              {trend.isPositive ? "↑" : "↓"} {trend.value}
+              {trend.value}
             </p>
           )}
         </div>
+
+        {/* icon lebih kecil */}
         <div
-          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg ${iconBgColor} flex items-center justify-center flex-shrink-0`}
+          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${iconBgColor}`}
         >
-          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconColor}`} />
+          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${iconColor}`} />
         </div>
       </div>
     </div>

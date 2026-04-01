@@ -1,98 +1,45 @@
-// ==================== BASE TYPES ====================
-export type PlanType = "Free" | "Pro" | "Premium";
-export type StatusType = "active" | "inactive" | "pending" | "suspended";
-
-// ==================== BARBERSHOP TYPES ====================
+/* ================= EXISTING TYPES ================= */
 export type Barbershop = {
   id: number;
   name: string;
   owner: string;
   location: string;
-  plan: PlanType;
+  plan: string;
   barbers: number;
-  status: StatusType;
+  status: string;
   revenue: string;
+  rate: number;
 };
 
-// ==================== USER TYPES ====================
-export type UserRole = "admin" | "owner" | "barber" | "customer";
-
-export type User = {
+/* ================= NEW TYPES ================= */
+export interface User {
   id: number;
   name: string;
   email: string;
-  role: UserRole;
   phone: string;
-  status: StatusType;
-  joinedDate: string;
-  barbershop?: string;
-};
+  role: "customer" | "barber" | "owner";
+  status: "active" | "inactive" | "banned";
+  joinDate: string;
+}
 
-// ==================== SUBSCRIPTION TYPES ====================
-export type SubscriptionStatus = "active" | "expired" | "cancelled" | "trial";
-
-export type Subscription = {
+export interface UserActivity {
   id: number;
-  name: string;
+  user: string;
   email: string;
-  plan: PlanType;
-  status: SubscriptionStatus;
-  startDate: string;
-  endDate: string;
-  revenue: string;
-  barbershop: string;
-};
+  activity: "login" | "logout" | "register" | "create_booking" | "update_profile" | "delete_account";
+  timestamp: string;
+  ipAddress: string;
+  device: string;
+}
 
-// Alias for backward compatibility
-export type Subscriber = Subscription;
-
-// ==================== PACKAGE TYPES ====================
-export type PackageType = {
+export interface LoginLog {
   id: number;
-  name: string;
-  plan: PlanType;
-  price: string;
-  duration: string;
-  features: number;
-  subscribers: number;
-  status: StatusType;
-  revenue: string;
-};
-
-// ==================== REPORT TYPES ====================
-export type ReportType = "sales" | "users" | "barbershops" | "subscriptions";
-export type ReportPeriod = "daily" | "weekly" | "monthly" | "yearly";
-
-export type Report = {
-  id: number;
-  title: string;
-  type: ReportType;
-  period: ReportPeriod;
-  generatedDate: string;
-  generatedBy: string;
-  status: "completed" | "processing" | "failed";
-  fileSize: string;
-};
-
-// ==================== STATS TYPES ====================
-export type StatsData = {
-  total: number;
-  active: number;
-  premium?: number;
-  totalBarbers?: number;
-  [key: string]: number | undefined;
-};
-
-// ==================== TABLE COLUMN TYPE ====================
-export type TableColumn<T> = {
-  key: keyof T | string;
-  label: string;
-  sortable?: boolean;
-  render?: (item: T) => React.ReactNode;
-};
-
-// ==================== FILTER TYPES ====================
-export type FilterOption = {
-  label: string;
-  value: string;
-};
+  user: string;
+  email: string;
+  action: "login" | "logout" | "register";
+  timestamp: string;
+  ipAddress: string;
+  device: string;
+  location: string;
+  status: "success" | "failed";
+}

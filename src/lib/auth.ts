@@ -3,6 +3,7 @@
 export type Role = "admin" | "owner" | "barber" | "customer";
 
 export type User = {
+  avatar: string | undefined;
   name: string;
   email: string;
   role: Role;
@@ -52,3 +53,4 @@ export function isLoggedIn() {
 export function getRole(): Role | null {
   return getUser()?.role ?? null;
 }
+

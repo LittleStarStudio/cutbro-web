@@ -17,7 +17,7 @@ export function useRoleGuard() {
       setSelectedRole(role);
     }
 
-    setReady(true); // ✅ selalu set ready
+    setReady(true);
   }, [navigate]);
 
   const clearRole = () => {

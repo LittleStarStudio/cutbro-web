@@ -1,12 +1,21 @@
+// File: src/components/dashboard/Sidebar.tsx
 import { Link, useLocation } from "react-router-dom";
-import { X, LogOut } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  X,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/* ================= TYPES ================= */
 
 export interface MenuItem {
   icon: LucideIcon;
   label: string;
-  href: string;
+  href?: string;
+  children?: MenuItem[];
 }
 
 interface SidebarProps {
@@ -15,11 +24,12 @@ interface SidebarProps {
   menuItems: MenuItem[];
   logo?: {
     icon: LucideIcon;
-    text: string;
-    highlight?: string;
+    text: string; // UserRole: "SuperAdmin" | "Owner" | "Barber" | "Customer"
   };
   onLogout?: () => void;
 }
+
+/* ================= COMPONENT ================= */
 
 export default function Sidebar({
   isOpen,
@@ -29,147 +39,267 @@ export default function Sidebar({
   onLogout,
 }: SidebarProps) {
   const location = useLocation();
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  const toggleMenu = (label: string) => {
+    setOpenMenus((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+    );
+  };
+
+  // Close on outside click (mobile only — < 768px)
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (
+        isOpen &&
+        window.innerWidth < 768 &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [isOpen, onClose]);
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && isOpen) onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isOpen, onClose]);
 
   return (
-    <aside
-      className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64",
-        "bg-zinc-900/95 backdrop-blur-xl", // sama seperti Header
-        "border-r border-zinc-800/50",
-        "shadow-2xl shadow-black/40",
-        "transition-transform duration-300 ease-in-out",
-        isOpen
-          ? "translate-x-0"
-          : "-translate-x-full lg:translate-x-0 lg:w-20"
-      )}
-    >
+    <>
+      <style>{`
+        /* ── Mobile backdrop ── */
+        .sb-backdrop {
+          display: none;
+        }
+        @media (max-width: 767px) {
+          .sb-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 49;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+          }
+          .sb-backdrop.open {
+            opacity: 1;
+            pointer-events: all;
+          }
+        }
+
+        /* ── Sidebar transitions ── */
+        .sb-panel {
+          transition:
+            transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+            width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+          will-change: transform, width;
+        }
+
+        @media (max-width: 767px) {
+          .sb-panel {
+            width: 16rem !important;
+            transform: translateX(-100%);
+          }
+          .sb-panel.open {
+            transform: translateX(0);
+          }
+        }
+
+        @media (min-width: 768px) {
+          .sb-panel {
+            transform: translateX(0) !important;
+            width: 5rem;
+          }
+          .sb-panel.open {
+            width: 16rem;
+          }
+        }
+
+        /* ── Label fade ── */
+        .sb-label {
+          overflow: hidden;
+          white-space: nowrap;
+          opacity: 0;
+          max-width: 0;
+          transition:
+            max-width 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.2s ease;
+          display: inline-block;
+        }
+        @media (max-width: 767px) {
+          .sb-label {
+            max-width: 200px;
+            opacity: 1;
+          }
+        }
+        @media (min-width: 768px) {
+          .sb-panel.open .sb-label {
+            max-width: 200px;
+            opacity: 1;
+          }
+        }
+      `}</style>
+
+      {/* Backdrop (mobile only) */}
       <div
+        className={`sb-backdrop ${isOpen ? "open" : ""}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Sidebar panel */}
+      <aside
+        ref={sidebarRef}
         className={cn(
-          "flex flex-col h-full",
-          !isOpen && "lg:items-center"
+          "sb-panel",
+          "fixed inset-y-0 left-0 z-50",
+          "bg-zinc-900/95 backdrop-blur-xl",
+          "border-r border-zinc-800/50",
+          "shadow-2xl shadow-black/40",
+          "overflow-hidden",
+          isOpen && "open"
         )}
       >
-        {/* ================= Logo Section ================= */}
-        <div className="px-6 py-8 flex items-center justify-between border-b border-zinc-800/50">
-          <Link to="/" className="flex items-center gap-3 group">
-            {logo && (
-              <>
-                {/* Logo Icon */}
-                <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-700 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all duration-300 group-hover:scale-105">
-                  <logo.icon className="w-6 h-6 text-white" />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
+        <div className="flex flex-col h-full w-64">
 
-                {/* Logo Text */}
-                {isOpen && (
-                  <div className="flex flex-col">
-                    <span className="text-xl font-bold text-white tracking-tight">
-                      {logo.text}
-                      {logo.highlight && (
-                        <span className="bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent ml-1">
-                          {logo.highlight}
-                        </span>
-                      )}
-                    </span>
-
-                    <span className="text-[10px] text-zinc-500 tracking-wider uppercase">
-                      Management System
+          {/* ── LOGO ── */}
+          <div className="px-4 py-6 flex items-center justify-between border-b border-zinc-800/50 min-h-[76px]">
+            <div className="flex items-center gap-3 min-w-0 cursor-default select-none">
+              {logo && (
+                <>
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-700 flex items-center justify-center shadow-lg">
+                    <logo.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="sb-label flex flex-col">
+                    <span className="text-[15px] font-bold leading-tight">
+                      <span className="text-white">{logo.text}</span>
+                      <span className="ml-1 bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent">
+                        Panel
+                      </span>
                     </span>
                   </div>
-                )}
-              </>
-            )}
-          </Link>
+                </>
+              )}
+            </div>
 
-          {/* Close mobile */}
-          <button
-            onClick={onClose}
-            className="lg:hidden text-zinc-400 hover:text-white transition-colors p-2 hover:bg-zinc-800/50 rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* ================= Navigation ================= */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.href;
-
-            return (
-              <Link
-                key={item.label}
-                to={item.href}
-                className={cn(
-                  "flex items-center gap-4 px-4 py-3.5 rounded-xl font-medium relative overflow-hidden group",
-                  "transition-all duration-300",
-                  isActive
-                    ? "bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-transparent text-amber-400 shadow-lg shadow-amber-500/5"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/50",
-                  !isOpen && "lg:justify-center lg:px-3"
-                )}
-              >
-                {/* Active Indicator */}
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-amber-400 to-yellow-600 rounded-r-full shadow-lg shadow-amber-500/50" />
-                )}
-
-                {/* Icon */}
-                <div
-                  className={cn(
-                    "relative z-10 transition-transform duration-300",
-                    isActive ? "scale-110" : "group-hover:scale-110"
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "w-5 h-5 flex-shrink-0",
-                      isActive &&
-                        "drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                    )}
-                  />
-                </div>
-
-                {/* Label */}
-                {isOpen && (
-                  <span className="font-inter text-[15px] tracking-wide relative z-10">
-                    {item.label}
-                  </span>
-                )}
-
-                {/* Hover overlay */}
-                {!isActive && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-800/0 via-zinc-800/40 to-zinc-800/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* ================= Logout ================= */}
-        {onLogout && (
-          <div className="p-4 border-t border-zinc-800/50 bg-zinc-900/80 backdrop-blur-xl">
+            {/* Close button — mobile only */}
             <button
-              onClick={onLogout}
-              className={cn(
-                "flex items-center gap-4 px-4 py-3.5 rounded-xl w-full relative overflow-hidden group",
-                "transition-all duration-300",
-                "text-zinc-400 hover:text-red-400 hover:bg-red-500/10",
-                !isOpen && "lg:justify-center lg:px-3"
-              )}
+              onClick={onClose}
+              className="md:hidden text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors shrink-0 ml-2"
+              aria-label="Close sidebar"
             >
-              <LogOut className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-
-              {isOpen && (
-                <span className="font-inter text-[15px] tracking-wide font-medium">
-                  Logout
-                </span>
-              )}
-
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <X className="w-4 h-4" />
             </button>
           </div>
-        )}
-      </div>
-    </aside>
+
+          {/* ── NAV ── */}
+          <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto overflow-x-hidden">
+            {menuItems.map((item) => {
+              const isActive = item.href
+                ? location.pathname === item.href
+                : item.children?.some((child) => location.pathname === child.href);
+              const isOpenMenu = openMenus.includes(item.label);
+
+              if (item.children) {
+                return (
+                  <div key={item.label}>
+                    <button
+                      onClick={() => toggleMenu(item.label)}
+                      title={item.label}
+                      className={cn(
+                        "flex items-center w-full gap-3 px-3 py-3 rounded-xl font-medium",
+                        "transition-all duration-200",
+                        isActive
+                          ? "text-amber-400 bg-amber-500/10"
+                          : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5 shrink-0" />
+                      <span className="sb-label flex-1 text-left text-sm">{item.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "sb-label w-4 h-4 shrink-0 transition-transform duration-200",
+                          isOpenMenu && "rotate-180"
+                        )}
+                      />
+                    </button>
+
+                    {isOpenMenu && isOpen && (
+                      <div className="ml-9 mt-1 space-y-0.5">
+                        {item.children.map((child) => {
+                          const childActive = location.pathname === child.href;
+                          return (
+                            <Link
+                              key={child.label}
+                              to={child.href!}
+                              onClick={() => window.innerWidth < 768 && onClose()}
+                              className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm",
+                                "transition-colors",
+                                childActive
+                                  ? "text-amber-400 bg-amber-500/10"
+                                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
+                              )}
+                            >
+                              <child.icon className="w-4 h-4 shrink-0" />
+                              <span>{child.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.label}
+                  to={item.href!}
+                  title={item.label}
+                  onClick={() => window.innerWidth < 768 && onClose()}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-xl font-medium",
+                    "transition-all duration-200",
+                    isActive
+                      ? "bg-amber-500/10 text-amber-400"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                  )}
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="sb-label text-sm">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* ── LOGOUT ── */}
+          {onLogout && (
+            <div className="p-3 border-t border-zinc-800/50">
+              <button
+                onClick={onLogout}
+                title="Logout"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl w-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut className="w-5 h-5 shrink-0" />
+                <span className="sb-label text-sm">Logout</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
   );
 }

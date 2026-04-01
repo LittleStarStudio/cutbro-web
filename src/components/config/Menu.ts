@@ -1,85 +1,202 @@
 import {
   LayoutDashboard,
-  Building2,
   Users,
-  Package,
-  CreditCard,
   BarChart3,
-  Settings,
-  Shield,
   Store,
   Calendar,
   Scissors,
-  Clock,
   DollarSign,
-  UserCircle,
+  User,
+  Percent,
+  User2Icon,
+  Clock10Icon,
+  ClipboardCheck,
+  SlidersHorizontal,
+  HandHelping,
+  ArrowLeftRight,
+  CalendarSync,
+  CalendarClock,
   History,
-  ShoppingBag,
+  ReceiptIcon,
 } from "lucide-react";
 
 import type { MenuItem } from "@/components/layout/SideBar";
 
-// Super Admin Menu
+/* ================= SUPER ADMIN ================= */
+
 export const superAdminMenu: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
-  { icon: Building2, label: "Barbershops", href: "/admin/barbershops" },
+
+  { icon: Store, label: "Barbershops", href: "/admin/barbershops" },
+
   { icon: Users, label: "Users", href: "/admin/users" },
-  { icon: Package, label: "Packages", href: "/admin/packages" },
-  { icon: CreditCard, label: "Subscriptions", href: "/admin/subscriptions" },
-  { icon: BarChart3, label: "Reports", href: "/admin/reports" },
-  { icon: Shield, label: "Security", href: "/admin/security" },
-  { icon: Settings, label: "Settings", href: "/admin/settings" },
+
+  { icon: ReceiptIcon, label: "Transaction", href: "/admin/transaction" },
+
+  { icon: CalendarSync, label: "Subscribe", href: "/admin/subscribe" },
+
+  {
+    icon: Users,
+    label: "Activity",
+    children: [
+      {
+        icon: ArrowLeftRight, 
+        label: "Login Logs", 
+        href: "/admin/login-logs",
+      },
+      {
+        icon: Users, 
+        label: "Users Activity", 
+        href: "/admin/users-activity",
+      },
+      {
+        icon: Users, 
+        label: "Admin Activity", 
+        href: "/admin/admin-activity",
+      },
+    ],
+  },
+
+  {
+    icon: BarChart3,
+    label: "Reports",
+    children: [
+      {
+        icon: Users,
+        label: "User",
+        href: "/admin/reports/users",
+      },
+      {
+        icon: DollarSign,
+        label: "Salary",
+        href: "/admin/reports/revenue",
+      },
+    ],
+  },
 ];
 
-// Owner Menu
+/* ================= OWNER ================= */
+
 export const ownerMenu: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/owner" },
-  { icon: Store, label: "My Barbershop", href: "/owner/barbershop" },
-  { icon: Calendar, label: "Bookings", href: "/owner/bookings" },
-  { icon: Scissors, label: "Barbers", href: "/owner/barbers" },
-  { icon: Package, label: "Services", href: "/owner/services" },
-  { icon: BarChart3, label: "Reports", href: "/owner/reports" },
-  { icon: DollarSign, label: "Finance", href: "/owner/finance" },
-  { icon: CreditCard, label: "Subscription", href: "/owner/subscription" },
-  { icon: Settings, label: "Settings", href: "/owner/settings" },
+  {
+    icon: Store,
+    label: "Barbershops",
+    children: [
+      {
+        icon: SlidersHorizontal,
+        label: "Management",
+        href: "/owner/barbershop",
+      },
+      {
+        icon: DollarSign,
+        label: "Payment Method",
+        href: "/owner/payment",
+      },
+    ],
+  },
+  { icon: ReceiptIcon, label: "Transaction", href: "/owner/transaction" },
+  {
+    icon: Scissors,
+    label: "Barbers",
+    children: [
+      {
+        icon: Clock10Icon,
+        label: "Shift",
+        href: "/owner/shift-Management",
+      },
+      {
+        icon: SlidersHorizontal,
+        label: "Management",
+        href: "/owner/barbers",
+      },
+      {
+        icon: ClipboardCheck,
+        label: "Assignment",
+        href: "/owner/shift",
+      },
+      {
+        icon: CalendarClock,
+        label: "Schedule",
+        href: "/owner/schedule",
+      },
+    ],
+  },
+  { icon: Calendar, label: "Booking", href: "/owner/booking" },
+  { icon: User, label: "Customers", href: "/owner/customers" },
+  {
+    icon: HandHelping,
+    label: "Services",
+    children: [
+      {
+        icon: Percent,
+        label: "Promos",
+        href: "/owner/promos",
+      },
+      {
+        icon: SlidersHorizontal,
+        label: "Management",
+        href: "/owner/services",
+      },
+      {
+        icon: Calendar,
+        label: "Categories",
+        href: "/owner/categories",
+      },
+    ],
+  },
+  {
+    icon: BarChart3,
+    label: "Reports",
+    children: [
+      {
+        icon: DollarSign,
+        label: "Salary",
+        href: "/owner/reports",
+      },
+      {
+        icon: Calendar,
+        label: "Barber",
+        href: "/owner/barber-report",
+      },
+    ],
+  },
 ];
 
-// Barber Menu
+/* ================= BARBER ================= */
+
 export const barberMenu: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/barber" },
-  { icon: Calendar, label: "My Schedule", href: "/barber/schedule" },
-  { icon: Clock, label: "Today's Bookings", href: "/barber/today" },
-  { icon: History, label: "History", href: "/barber/history" },
-  { icon: BarChart3, label: "Performance", href: "/barber/performance" },
-  { icon: DollarSign, label: "Earnings", href: "/barber/earnings" },
-  { icon: UserCircle, label: "Profile", href: "/barber/profile" },
-  { icon: Settings, label: "Settings", href: "/barber/settings" },
+  { icon: Store,           label: "My Workplace",  href: "/barber/barbershops" },
+  { icon: Calendar, label: "My Activity", href: "/barber/activity" },
+  { icon: History, label: "My History", href: "/barber/my-history" },
+  { icon: CalendarClock, label: "My Schedule", href: "/barber/my-schedule" },
 ];
 
-// Customer Menu (No Sidebar - Empty array)
-export const customerMenu: MenuItem[] = [];
+export const customerMenu: MenuItem[] = [
+  { icon: Calendar,  label: "Bookings",    href: "/customer/booking" },
+  { icon: Calendar,  label: "My Bookings", href: "/customer/my-bookings" },
+  { icon: User2Icon, label: "Profile",     href: "/customer/profile" },
+];
 
-// Logo configurations for each role
+/* ================= LOGOS ================= */
+
 export const superAdminLogo = {
-  icon: Shield,
-  text: "Super",
-  highlight: "Admin",
+  icon: Scissors,
+  text: "Admin",
 };
 
 export const ownerLogo = {
-  icon: Store,
-  text: "Barber",
-  highlight: "Owner",
+  icon: Scissors,
+  text: "Owner",
 };
 
 export const barberLogo = {
   icon: Scissors,
   text: "Barber",
-  highlight: "Pro",
 };
 
 export const customerLogo = {
-  icon: ShoppingBag,
-  text: "Barber",
-  highlight: "Book",
+  icon: Scissors,
+  text: "Customer",
 };
